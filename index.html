@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARCADERIFT — Game Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #080b10;
+    --surface: #0d1117;
+    --card: #111820;
+    --card-hover: #182030;
+    --border: #1e2d3d;
+    --border-glow: #00d4ff33;
+    --accent: #00d4ff;
+    --accent2: #ff3cac;
+    --accent3: #7c3aed;
+    --text: #e2eaf4;
+    --muted: #5a7a99;
+    --scanline: rgba(0,212,255,0.03);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scanline overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      var(--scanline) 2px,
+      var(--scanline) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* Header */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(8,11,16,0.92);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    height: 64px;
+  }
+
+  .logo {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    font-size: 1.2rem;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    text-shadow: 0 0 20px var(--accent);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .logo span { color: var(--accent2); }
+
+  .search-wrap {
+    flex: 1;
+    max-width: 480px;
+    position: relative;
+  }
+
+  .search-wrap svg {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    pointer-events: none;
+  }
+
+  #search {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px 8px 38px;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.875rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  #search:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--border-glow);
+  }
+
+  #search::placeholder { color: var(--muted); }
+
+  .count {
+    margin-left: auto;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .count span { color: var(--accent); }
+
+  /* Hero */
+  .hero {
+    text-align: center;
+    padding: 4rem 2rem 2.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(0,212,255,0.07) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero h1 {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.75rem;
+  }
+
+  .hero h1 .line1 { color: var(--text); }
+  .hero h1 .line2 {
+    color: var(--accent);
+    text-shadow: 0 0 40px var(--accent), 0 0 80px rgba(0,212,255,0.3);
+    display: block;
+  }
+
+  .hero p {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-bottom: 2rem;
+  }
+
+  /* Filter tabs */
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    padding: 0 2rem 2rem;
+  }
+
+  .filter-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    transition: all 0.18s;
+    letter-spacing: 0.03em;
+  }
+
+  .filter-btn:hover, .filter-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 10px var(--border-glow);
+  }
+
+  /* Grid */
+  .grid-container {
+    padding: 0 1.5rem 4rem;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+
+  /* Card */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    position: relative;
+    text-decoration: none;
+    display: block;
+  }
+
+  .card:hover {
+    transform: translateY(-4px);
+    border-color: var(--accent);
+    box-shadow: 0 8px 30px rgba(0,212,255,0.15), 0 0 0 1px var(--border-glow);
+    background: var(--card-hover);
+  }
+
+  .card-thumb {
+    width: 100%;
+    aspect-ratio: 16/9;
+    object-fit: cover;
+    display: block;
+    background: var(--surface);
+  }
+
+  .card-thumb-placeholder {
+    width: 100%;
+    aspect-ratio: 16/9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #0d1a26 0%, #111820 100%);
+    font-family: 'Orbitron', monospace;
+    font-size: 1.5rem;
+    color: var(--accent);
+    text-shadow: 0 0 20px var(--accent);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card-thumb-placeholder::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 10px,
+      rgba(0,212,255,0.03) 10px,
+      rgba(0,212,255,0.03) 20px
+    );
+  }
+
+  .card-info {
+    padding: 10px 12px 12px;
+  }
+
+  .card-title {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.3;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .card-tag {
+    display: inline-block;
+    margin-top: 5px;
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.88);
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    backdrop-filter: blur(8px);
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    box-shadow: 0 0 60px rgba(0,212,255,0.2);
+    width: 100%;
+    max-width: 1100px;
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .modal-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--accent);
+    flex: 1;
+    letter-spacing: 0.08em;
+  }
+
+  .modal-close {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+
+  .modal-close:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  .modal-new-tab {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.72rem;
+    font-family: 'Inter', sans-serif;
+    letter-spacing: 0.04em;
+    transition: all 0.15s;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .modal-new-tab:hover { border-color: var(--accent); color: var(--accent); }
+
+  .modal iframe {
+    width: 100%;
+    flex: 1;
+    border: none;
+    display: block;
+    background: #000;
+  }
+
+  .no-results {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 4rem 0;
+    color: var(--muted);
+    font-family: 'Orbitron', monospace;
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+  }
+
+  @media (max-width: 600px) {
+    header { padding: 0 1rem; gap: 0.75rem; }
+    .count { display: none; }
+    .hero { padding: 2.5rem 1rem 1.5rem; }
+    .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.75rem; }
+    .grid-container { padding: 0 0.75rem 3rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">ARCADE<span>RIFT</span></div>
+  <div class="search-wrap">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+    <input type="text" id="search" placeholder="Search games..." autocomplete="off">
+  </div>
+  <div class="count"><span id="countNum">0</span> GAMES</div>
+</header>
+
+<div class="hero">
+  <h1>
+    <span class="line1">PLAY ANYTHING.</span>
+    <span class="line2">INSTANTLY.</span>
+  </h1>
+  <p>Hundreds of unblocked games — no downloads, no installs.</p>
+</div>
+
+<div class="filters" id="filters"></div>
+
+<div class="grid-container">
+  <div class="grid" id="grid"></div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">LOADING...</div>
+      <a class="modal-new-tab" id="modalNewTab" target="_blank">↗ OPEN TAB</a>
+      <button class="modal-close" id="modalClose">✕</button>
+    </div>
+    <iframe id="modalFrame" src="" allowfullscreen></iframe>
+  </div>
+</div>
+
+<script>
+const games = [
+  { file: "1.12.html", title: "1.12", tags: ["other"] },
+  { file: "1.5.html", title: "1.5", tags: ["other"] },
+  { file: "1.8.html", title: "1.8", tags: ["other"] },
+  { file: "10minutestilldawn.html", title: "10 Minutes Till Dawn", tags: ["action","shooter"] },
+  { file: "12minibattles.html", title: "12 Mini Battles", tags: ["action","multiplayer"] },
+  { file: "1on1soccer.html", title: "1 on 1 Soccer", tags: ["sports","multiplayer"] },
+  { file: "1on1tennis.html", title: "1 on 1 Tennis", tags: ["sports","multiplayer"] },
+  { file: "1v1.lol.html", title: "1v1.lol", tags: ["action","shooter","multiplayer"] },
+  { file: "2048.html", title: "2048", tags: ["puzzle"] },
+  { file: "2048cupcakes.html", title: "2048 Cupcakes", tags: ["puzzle"] },
+  { file: "3Dflightsimulator.html", title: "3D Flight Simulator", tags: ["action","driving"] },
+  { file: "8ballclassic.html", title: "8 Ball Classic", tags: ["sports","pool"] },
+  { file: "Alpha_1.2.6.html", title: "Alpha 1.2.6", tags: ["other"] },
+  { file: "Beta_1.3.html", title: "Beta 1.3", tags: ["other"] },
+  { file: "Indev.html", title: "Indev", tags: ["other"] },
+  { file: "agariolite.html", title: "Agario Lite", tags: ["io","multiplayer"] },
+  { file: "ageofwar.html", title: "Age of War", tags: ["strategy"] },
+  { file: "ageofwar2.html", title: "Age of War 2", tags: ["strategy"] },
+  { file: "agesofconflict.html", title: "Ages of Conflict", tags: ["strategy"] },
+  { file: "amongus.html", title: "Among Us", tags: ["multiplayer","action"] },
+  { file: "angrybirds.html", title: "Angry Birds", tags: ["puzzle","casual"] },
+  { file: "angrybirdsshowdown.html", title: "Angry Birds Showdown", tags: ["puzzle","casual"] },
+  { file: "angrybirdsspace.html", title: "Angry Birds Space", tags: ["puzzle","casual"] },
+  { file: "awesometanks.html", title: "Awesome Tanks", tags: ["action","shooter"] },
+  { file: "awesometanks2.html", title: "Awesome Tanks 2", tags: ["action","shooter"] },
+  { file: "backrooms.html", title: "Backrooms", tags: ["horror","action"] },
+  { file: "baconmaydie.html", title: "Bacon May Die", tags: ["action"] },
+  { file: "badicecream.html", title: "Bad Ice Cream", tags: ["arcade","casual"] },
+  { file: "badicecream2.html", title: "Bad Ice Cream 2", tags: ["arcade","casual"] },
+  { file: "badicecream3.html", title: "Bad Ice Cream 3", tags: ["arcade","casual"] },
+  { file: "badparenting.html", title: "Bad Parenting", tags: ["casual"] },
+  { file: "badpiggies.html", title: "Bad Piggies", tags: ["puzzle","casual"] },
+  { file: "baldisbasics.html", title: "Baldi's Basics", tags: ["horror","action"] },
+  { file: "baseballbros.html", title: "Baseball Bros", tags: ["sports","multiplayer"] },
+  { file: "basketballlegends.html", title: "Basketball Legends", tags: ["sports","multiplayer"] },
+  { file: "basketballstars.html", title: "Basketball Stars", tags: ["sports","multiplayer"] },
+  { file: "basketbros.html", title: "Basket Bros", tags: ["sports","multiplayer"] },
+  { file: "basketrandom.html", title: "Basket Random", tags: ["sports","multiplayer"] },
+  { file: "bitlife.html", title: "BitLife", tags: ["simulation","casual"] },
+  { file: "bitplanes.htm", title: "Bit Planes", tags: ["action"] },
+  { file: "blockysnakes.html", title: "Blocky Snakes", tags: ["arcade","io"] },
+  { file: "bloonsTD.html", title: "Bloons TD", tags: ["strategy","tower-defense"] },
+  { file: "bloonsTD2.html", title: "Bloons TD 2", tags: ["strategy","tower-defense"] },
+  { file: "bloonsTD3.html", title: "Bloons TD 3", tags: ["strategy","tower-defense"] },
+  { file: "bloonsTD4.html", title: "Bloons TD 4", tags: ["strategy","tower-defense"] },
+  { file: "bloonsTD5.html", title: "Bloons TD 5", tags: ["strategy","tower-defense"] },
+  { file: "bloxorz.html", title: "Bloxorz", tags: ["puzzle"] },
+  { file: "blumgiracers.html", title: "Blumgi Racers", tags: ["driving","casual"] },
+  { file: "blumgirocket.html", title: "Blumgi Rocket", tags: ["action","casual"] },
+  { file: "bobtherobber.html", title: "Bob the Robber", tags: ["puzzle","action"] },
+  { file: "bobtherobber2.html", title: "Bob the Robber 2", tags: ["puzzle","action"] },
+  { file: "bobtherobber5.html", title: "Bob the Robber 5", tags: ["puzzle","action"] },
+  { file: "bouncymotors.html", title: "Bouncy Motors", tags: ["driving","casual"] },
+  { file: "bowmasters.html", title: "Bowmasters", tags: ["action","multiplayer"] },
+  { file: "boxingrandom.htm", title: "Boxing Random", tags: ["sports","multiplayer"] },
+  { file: "breakingthebank.html", title: "Breaking the Bank", tags: ["puzzle","action"] },
+  { file: "bubbleshooter.html", title: "Bubble Shooter", tags: ["puzzle","casual"] },
+  { file: "candycrush.html", title: "Candy Crush", tags: ["puzzle","casual"] },
+  { file: "capybaraclicker.html", title: "Capybara Clicker", tags: ["clicker","casual"] },
+  { file: "cardrawing.html", title: "Car Drawing", tags: ["casual","driving"] },
+  { file: "carkingarena.html", title: "Car King Arena", tags: ["driving","action"] },
+  { file: "chess.html", title: "Chess", tags: ["puzzle","strategy"] },
+  { file: "choppyorc.html", title: "Choppy Orc", tags: ["action","puzzle"] },
+  { file: "circloO.html", title: "CircloO", tags: ["puzzle"] },
+  { file: "circloO2.html", title: "CircloO 2", tags: ["puzzle"] },
+  { file: "clashofvikings.html", title: "Clash of Vikings", tags: ["strategy","action"] },
+  { file: "cleanupio.html", title: "Cleanup.io", tags: ["io","casual"] },
+  { file: "clusterrush.html", title: "Cluster Rush", tags: ["action","platformer"] },
+  { file: "cookieclicker.htm", title: "Cookie Clicker", tags: ["clicker","casual"] },
+  { file: "crazycars.html", title: "Crazy Cars", tags: ["driving","action"] },
+  { file: "crazycattle3D.html", title: "Crazy Cattle 3D", tags: ["action","casual"] },
+  { file: "crazycrashlanding.html", title: "Crazy Crash Landing", tags: ["action","casual"] },
+  { file: "crazymotorcycle.html", title: "Crazy Motorcycle", tags: ["driving","action"] },
+  { file: "crossyroad.htm", title: "Crossy Road", tags: ["arcade","casual"] },
+  { file: "cuttherope.html", title: "Cut the Rope", tags: ["puzzle","casual"] },
+  { file: "dadish.html", title: "Dadish", tags: ["platformer"] },
+  { file: "dadish2.html", title: "Dadish 2", tags: ["platformer"] },
+  { file: "dadish3.html", title: "Dadish 3", tags: ["platformer"] },
+  { file: "deathchase.html", title: "Death Chase", tags: ["driving","action"] },
+  { file: "deathrun3D.html", title: "Death Run 3D", tags: ["action","runner"] },
+  { file: "demolitionderbycrashracing.html", title: "Demolition Derby", tags: ["driving","action"] },
+  { file: "doodlejump.html", title: "Doodle Jump", tags: ["arcade","casual"] },
+  { file: "drawclimber.html", title: "Draw Climber", tags: ["casual","puzzle"] },
+  { file: "dreadheadparkour.htm", title: "Dread Head Parkour", tags: ["platformer","action"] },
+  { file: "driftboss.htm", title: "Drift Boss", tags: ["driving","casual"] },
+  { file: "drivemad.htm", title: "Drive Mad", tags: ["driving","action"] },
+  { file: "ducklife.html", title: "Duck Life", tags: ["simulation","casual"] },
+  { file: "ducklife2.html", title: "Duck Life 2", tags: ["simulation","casual"] },
+  { file: "ducklife3.html", title: "Duck Life 3", tags: ["simulation","casual"] },
+  { file: "ducklife4.html", title: "Duck Life 4", tags: ["simulation","casual"] },
+  { file: "ducklife5.html", title: "Duck Life 5", tags: ["simulation","casual"] },
+  { file: "ducklingsio.html", title: "Ducklings.io", tags: ["io","casual"] },
+  { file: "eagleride.html", title: "Eagle Ride", tags: ["action","casual"] },
+  { file: "earntodie.html", title: "Earn to Die", tags: ["driving","action"] },
+  { file: "earntodie2.html", title: "Earn to Die 2", tags: ["driving","action"] },
+  { file: "eggycar.html", title: "Eggy Car", tags: ["driving","casual"] },
+  { file: "elasticface.htm", title: "Elastic Face", tags: ["casual"] },
+  { file: "escaperoad.html", title: "Escape Road", tags: ["driving","action"] },
+  { file: "escaperoad2.html", title: "Escape Road 2", tags: ["driving","action"] },
+  { file: "escapingtheprison.html", title: "Escaping the Prison", tags: ["puzzle","action"] },
+  { file: "evilglitch.html", title: "Evil Glitch", tags: ["action","platformer"] },
+  { file: "fancypantsadventure.html", title: "Fancy Pants Adventure", tags: ["platformer"] },
+  { file: "fancypantsadventure2.html", title: "Fancy Pants Adventure 2", tags: ["platformer"] },
+  { file: "fireboyandwatergirl.html", title: "Fireboy & Watergirl", tags: ["puzzle","multiplayer","platformer"] },
+  { file: "fireboyandwatergirl2.html", title: "Fireboy & Watergirl 2", tags: ["puzzle","multiplayer","platformer"] },
+  { file: "fireboyandwatergirl3.html", title: "Fireboy & Watergirl 3", tags: ["puzzle","multiplayer","platformer"] },
+  { file: "fireboyandwatergirl4.html", title: "Fireboy & Watergirl 4", tags: ["puzzle","multiplayer","platformer"] },
+  { file: "flappybird.html", title: "Flappy Bird", tags: ["arcade","casual"] },
+  { file: "floodrunner2.html", title: "Flood Runner 2", tags: ["runner","action"] },
+  { file: "floodrunner3.html", title: "Flood Runner 3", tags: ["runner","action"] },
+  { file: "floodrunner4.html", title: "Flood Runner 4", tags: ["runner","action"] },
+  { file: "fnaf.html", title: "FNAF", tags: ["horror"] },
+  { file: "fnaf2.html", title: "FNAF 2", tags: ["horror"] },
+  { file: "fnaf3.html", title: "FNAF 3", tags: ["horror"] },
+  { file: "fnaf4.html", title: "FNAF 4", tags: ["horror"] },
+  { file: "footballbros.html", title: "Football Bros", tags: ["sports","multiplayer"] },
+  { file: "footballlegends.html", title: "Football Legends", tags: ["sports","multiplayer"] },
+  { file: "freerider3.html", title: "Free Rider 3", tags: ["driving","casual"] },
+  { file: "fruitninja.html", title: "Fruit Ninja", tags: ["arcade","casual"] },
+  { file: "funnybattle.html", title: "Funny Battle", tags: ["action","casual"] },
+  { file: "funnybattle2.html", title: "Funny Battle 2", tags: ["action","casual"] },
+  { file: "funnymadracing.html", title: "Funny Mad Racing", tags: ["driving","casual"] },
+  { file: "funnyshooter2.html", title: "Funny Shooter 2", tags: ["action","shooter"] },
+  { file: "geometrydash.html", title: "Geometry Dash", tags: ["platformer","rhythm"] },
+  { file: "geometrydashlite.html", title: "Geometry Dash Lite", tags: ["platformer","rhythm"] },
+  { file: "geometryvibes.html", title: "Geometry Vibes", tags: ["platformer","rhythm"] },
+  { file: "getawayshootout.htm", title: "Getaway Shootout", tags: ["action","multiplayer"] },
+  { file: "getontop.html", title: "Get on Top", tags: ["action","multiplayer"] },
+  { file: "gladihoppers.html", title: "Gladihoppers", tags: ["action","multiplayer"] },
+  { file: "googlebaseball.html", title: "Google Baseball", tags: ["sports","casual"] },
+  { file: "googledino.html", title: "Google Dino", tags: ["runner","casual"] },
+  { file: "granny.html", title: "Granny", tags: ["horror","action"] },
+  { file: "granny2.html", title: "Granny 2", tags: ["horror","action"] },
+  { file: "guesstheiranswer.html", title: "Guess Their Answer", tags: ["casual","puzzle"] },
+  { file: "hanger2.html", title: "Hanger 2", tags: ["action","casual"] },
+  { file: "happywheels.html", title: "Happy Wheels", tags: ["action","casual"] },
+  { file: "helixjump.html", title: "Helix Jump", tags: ["arcade","casual"] },
+  { file: "highwaytraffic.html", title: "Highway Traffic", tags: ["driving","casual"] },
+  { file: "hillclimbracinglite.html", title: "Hill Climb Racing Lite", tags: ["driving","casual"] },
+  { file: "holeio.html", title: "Hole.io", tags: ["io","casual"] },
+  { file: "houseofhazards.html", title: "House of Hazards", tags: ["casual","multiplayer"] },
+  { file: "hoverracerdrive.html", title: "Hover Racer Drive", tags: ["driving","action"] },
+  { file: "idlebreakout.html", title: "Idle Breakout", tags: ["clicker","arcade"] },
+  { file: "ironsnout.html", title: "Iron Snout", tags: ["action"] },
+  { file: "jetpackjoyride.html", title: "Jetpack Joyride", tags: ["runner","arcade"] },
+  { file: "johnnytrigger.html", title: "Johnny Trigger", tags: ["action","shooter"] },
+  { file: "jumpingshell.html", title: "Jumping Shell", tags: ["platformer","casual"] },
+  { file: "karatebros.html", title: "Karate Bros", tags: ["action","multiplayer"] },
+  { file: "kartbros.html", title: "Kart Bros", tags: ["driving","multiplayer"] },
+  { file: "learntofly.html", title: "Learn to Fly", tags: ["action","casual"] },
+  { file: "learntofly2.html", title: "Learn to Fly 2", tags: ["action","casual"] },
+  { file: "learntofly3.html", title: "Learn to Fly 3", tags: ["action","casual"] },
+  { file: "learntoflyidle.html", title: "Learn to Fly Idle", tags: ["clicker","casual"] },
+  { file: "leveldevil.html", title: "Level Devil", tags: ["platformer","puzzle"] },
+  { file: "madalinstuntcars2.html", title: "Madalin Stunt Cars 2", tags: ["driving","action"] },
+  { file: "melonplayground.html", title: "Melon Playground", tags: ["simulation","casual"] },
+  { file: "mergeroundracers.html", title: "Merge Round Racers", tags: ["casual","puzzle"] },
+  { file: "minesweeper.html", title: "Minesweeper", tags: ["puzzle"] },
+  { file: "monkeymart.htm", title: "Monkey Mart", tags: ["simulation","casual"] },
+  { file: "monstertracks.html", title: "Monster Tracks", tags: ["driving","action"] },
+  { file: "motox3m.htm", title: "Moto X3M", tags: ["driving","action"] },
+  { file: "motox3m2.html", title: "Moto X3M 2", tags: ["driving","action"] },
+  { file: "motox3m3.html", title: "Moto X3M 3", tags: ["driving","action"] },
+  { file: "motox3mpoolparty.html", title: "Moto X3M Pool Party", tags: ["driving","action"] },
+  { file: "motox3mspookyland.html", title: "Moto X3M Spooky Land", tags: ["driving","action"] },
+  { file: "motox3mwinter.html", title: "Moto X3M Winter", tags: ["driving","action"] },
+  { file: "noobminer.html", title: "Noob Miner", tags: ["simulation","casual"] },
+  { file: "oppositeday.html", title: "Opposite Day", tags: ["platformer","puzzle"] },
+  { file: "ovo.html", title: "OvO", tags: ["platformer"] },
+  { file: "ovo2.html", title: "OvO 2", tags: ["platformer"] },
+  { file: "ovo3dimensions.html", title: "OvO 3 Dimensions", tags: ["platformer"] },
+  { file: "pacman.html", title: "Pac-Man", tags: ["arcade","classic"] },
+  { file: "papasbakeria.html", title: "Papa's Bakeria", tags: ["simulation","casual"] },
+  { file: "papasburgeria.html", title: "Papa's Burgeria", tags: ["simulation","casual"] },
+  { file: "papascheeseria.html", title: "Papa's Cheeseria", tags: ["simulation","casual"] },
+  { file: "papascupcakeria.html", title: "Papa's Cupcakeria", tags: ["simulation","casual"] },
+  { file: "papasdonuteria.html", title: "Papa's Donuteria", tags: ["simulation","casual"] },
+  { file: "papasfreezeria.html", title: "Papa's Freezeria", tags: ["simulation","casual"] },
+  { file: "papashotdoggeria.html", title: "Papa's Hot Doggeria", tags: ["simulation","casual"] },
+  { file: "papaspancakeria.html", title: "Papa's Pancakeria", tags: ["simulation","casual"] },
+  { file: "papaspastaria.html", title: "Papa's Pastaria", tags: ["simulation","casual"] },
+  { file: "papaspizzeria.html", title: "Papa's Pizzeria", tags: ["simulation","casual"] },
+  { file: "papasscooperia.html", title: "Papa's Scooperia", tags: ["simulation","casual"] },
+  { file: "papassushiria.html", title: "Papa's Sushiria", tags: ["simulation","casual"] },
+  { file: "papastacomia.html", title: "Papa's Tacomia", tags: ["simulation","casual"] },
+  { file: "papaswingeria.html", title: "Papa's Wingeria", tags: ["simulation","casual"] },
+  { file: "paperio2.htm", title: "Paper.io 2", tags: ["io","casual"] },
+  { file: "parkingfury.html", title: "Parking Fury", tags: ["driving","casual"] },
+  { file: "parkingfury2.html", title: "Parking Fury 2", tags: ["driving","casual"] },
+  { file: "parkingfury3.html", title: "Parking Fury 3", tags: ["driving","casual"] },
+  { file: "picosschool.html", title: "Pico's School", tags: ["action"] },
+  { file: "pingpongchaos.html", title: "Ping Pong Chaos", tags: ["sports","multiplayer"] },
+  { file: "pixelspeedrun.html", title: "Pixel Speedrun", tags: ["platformer","action"] },
+  { file: "plantsvszombies.html", title: "Plants vs Zombies", tags: ["strategy","tower-defense"] },
+  { file: "plonky.html", title: "Plonky", tags: ["puzzle","casual"] },
+  { file: "polytrack.html", title: "Polytrack", tags: ["driving","casual"] },
+  { file: "poorbunny.html", title: "Poor Bunny", tags: ["platformer","casual"] },
+  { file: "pou.html", title: "Pou", tags: ["simulation","casual"] },
+  { file: "ragdollarchers.htm", title: "Ragdoll Archers", tags: ["action","casual"] },
+  { file: "ragdollhit.html", title: "Ragdoll Hit", tags: ["action","casual"] },
+  { file: "ragdollsoccer.html", title: "Ragdoll Soccer", tags: ["sports","casual"] },
+  { file: "redball4vol1.html", title: "Red Ball 4 Vol 1", tags: ["platformer","puzzle"] },
+  { file: "redball4vol2.html", title: "Red Ball 4 Vol 2", tags: ["platformer","puzzle"] },
+  { file: "redball4vol3.html", title: "Red Ball 4 Vol 3", tags: ["platformer","puzzle"] },
+  { file: "retrobowl.html", title: "Retro Bowl", tags: ["sports","casual"] },
+  { file: "retrobowlcollege.html", title: "Retro Bowl College", tags: ["sports","casual"] },
+  { file: "retrohighway.html", title: "Retro Highway", tags: ["driving","casual"] },
+  { file: "retropingpong.html", title: "Retro Ping Pong", tags: ["sports","classic"] },
+  { file: "riddleschool.html", title: "Riddle School", tags: ["puzzle","action"] },
+  { file: "riddleschool2.html", title: "Riddle School 2", tags: ["puzzle","action"] },
+  { file: "riddleschool3.html", title: "Riddle School 3", tags: ["puzzle","action"] },
+  { file: "riddleschool4.html", title: "Riddle School 4", tags: ["puzzle","action"] },
+  { file: "riddleschool5.html", title: "Riddle School 5", tags: ["puzzle","action"] },
+  { file: "riddletransfer.html", title: "Riddle Transfer", tags: ["puzzle","action"] },
+  { file: "riddletransfer2.html", title: "Riddle Transfer 2", tags: ["puzzle","action"] },
+  { file: "rocketsoccerderby.html", title: "Rocket Soccer Derby", tags: ["sports","action"] },
+  { file: "rooftopsnipers.htm", title: "Rooftop Snipers", tags: ["action","shooter","multiplayer"] },
+  { file: "rooftopsnipers2.html", title: "Rooftop Snipers 2", tags: ["action","shooter","multiplayer"] },
+  { file: "run.html", title: "Run", tags: ["runner","platformer"] },
+  { file: "run2.html", title: "Run 2", tags: ["runner","platformer"] },
+  { file: "run3.html", title: "Run 3", tags: ["runner","platformer"] },
+  { file: "sandgame.html", title: "Sand Game", tags: ["simulation","casual"] },
+  { file: "shortlife.html", title: "Short Life", tags: ["action","casual"] },
+  { file: "slope.html", title: "Slope", tags: ["arcade","runner"] },
+  { file: "slope2player.html", title: "Slope 2 Player", tags: ["arcade","runner","multiplayer"] },
+  { file: "slope3.html", title: "Slope 3", tags: ["arcade","runner"] },
+  { file: "slowroads.html", title: "Slow Roads", tags: ["driving","casual"] },
+  { file: "sm63.html", title: "Super Mario 63", tags: ["platformer","classic"] },
+  { file: "sm64.html", title: "Super Mario 64", tags: ["platformer","classic"] },
+  { file: "snowballio.html", title: "Snowball.io", tags: ["io","casual"] },
+  { file: "snowrider.htm", title: "Snow Rider", tags: ["driving","casual"] },
+  { file: "snowroad.htm", title: "Snow Road", tags: ["driving","casual"] },
+  { file: "soccerbros.html", title: "Soccer Bros", tags: ["sports","multiplayer"] },
+  { file: "soccerrandom.htm", title: "Soccer Random", tags: ["sports","multiplayer"] },
+  { file: "spacebarclicker.html", title: "Spacebar Clicker", tags: ["clicker","casual"] },
+  { file: "spaceiskey.html", title: "Space is Key", tags: ["arcade","casual"] },
+  { file: "spaceiskey2.html", title: "Space is Key 2", tags: ["arcade","casual"] },
+  { file: "spacewaves.html", title: "Space Waves", tags: ["action","shooter"] },
+  { file: "speedstars.html", title: "Speed Stars", tags: ["sports","runner"] },
+  { file: "sprunki.html", title: "Sprunki", tags: ["casual","music"] },
+  { file: "stack.html", title: "Stack", tags: ["arcade","casual"] },
+  { file: "stacktris.html", title: "Stacktris", tags: ["puzzle","arcade"] },
+  { file: "stateio.html", title: "State.io", tags: ["strategy","io"] },
+  { file: "stickarchersbattle.html", title: "Stick Archers Battle", tags: ["action","multiplayer"] },
+  { file: "stickfighter.html", title: "Stick Fighter", tags: ["action","multiplayer"] },
+  { file: "stickmanhook.html", title: "Stickman Hook", tags: ["action","casual"] },
+  { file: "stickmerge.html", title: "Stick Merge", tags: ["casual","puzzle"] },
+  { file: "subwaysurfersbeijing.html", title: "Subway Surfers Beijing", tags: ["runner","arcade"] },
+  { file: "subwaysurfershavana.html", title: "Subway Surfers Havana", tags: ["runner","arcade"] },
+  { file: "subwaysurferssanfrancisco.html", title: "Subway Surfers SF", tags: ["runner","arcade"] },
+  { file: "superbikethechampion.html", title: "Superbike Champion", tags: ["driving","action"] },
+  { file: "superhot.html", title: "Superhot", tags: ["action","shooter"] },
+  { file: "superliquidsoccer.html", title: "Super Liquid Soccer", tags: ["sports","casual"] },
+  { file: "superstarcar.html", title: "Superstar Car", tags: ["driving","action"] },
+  { file: "tabletennisworldtour.html", title: "Table Tennis World Tour", tags: ["sports","casual"] },
+  { file: "tag.html", title: "Tag", tags: ["action","casual"] },
+  { file: "taproad.html", title: "Tap Road", tags: ["casual","runner"] },
+  { file: "templeofboom.html", title: "Temple of Boom", tags: ["action","shooter"] },
+  { file: "templerun2.htm", title: "Temple Run 2", tags: ["runner","arcade"] },
+  { file: "territorialio.html", title: "Territorial.io", tags: ["strategy","io"] },
+  { file: "theimpossiblequiz.html", title: "The Impossible Quiz", tags: ["puzzle","casual"] },
+  { file: "theimpossiblequiz2.html", title: "The Impossible Quiz 2", tags: ["puzzle","casual"] },
+  { file: "thereisnog.html", title: "There is No G", tags: ["puzzle","platformer"] },
+  { file: "theyarecoming.html", title: "They Are Coming", tags: ["action","shooter"] },
+  { file: "thisistheonlylevel.html", title: "This Is The Only Level", tags: ["puzzle","platformer"] },
+  { file: "thisistheonlyleveltoo.html", title: "Only Level Too", tags: ["puzzle","platformer"] },
+  { file: "timeshooter2.html", title: "Time Shooter 2", tags: ["action","shooter"] },
+  { file: "timeshooter3.htm", title: "Time Shooter 3", tags: ["action","shooter"] },
+  { file: "tinyfishing.html", title: "Tiny Fishing", tags: ["casual","simulation"] },
+  { file: "tombofthemask.htm", title: "Tomb of the Mask", tags: ["arcade","action"] },
+  { file: "trapthecat.html", title: "Trap the Cat", tags: ["puzzle","casual"] },
+  { file: "triviacrack.html", title: "Trivia Crack", tags: ["puzzle","casual"] },
+  { file: "tubejumpers.html", title: "Tube Jumpers", tags: ["action","multiplayer"] },
+  { file: "tunnelrush.html", title: "Tunnel Rush", tags: ["arcade","runner"] },
+  { file: "unicyclehero.html", title: "Unicycle Hero", tags: ["casual","sports"] },
+  { file: "vex4.html", title: "Vex 4", tags: ["platformer","action"] },
+  { file: "vex5.html", title: "Vex 5", tags: ["platformer","action"] },
+  { file: "vex6.htm", title: "Vex 6", tags: ["platformer","action"] },
+  { file: "vex7.htm", title: "Vex 7", tags: ["platformer","action"] },
+  { file: "vex8.htm", title: "Vex 8", tags: ["platformer","action"] },
+  { file: "vexx3m.html", title: "Vexx 3M", tags: ["driving","action"] },
+  { file: "vexx3m2.html", title: "Vexx 3M 2", tags: ["driving","action"] },
+  { file: "volleyrandom.html", title: "Volley Random", tags: ["sports","multiplayer"] },
+  { file: "wartheknights.html", title: "War: The Knights", tags: ["strategy","action"] },
+  { file: "webecomewhatwebehold.html", title: "We Become What We Behold", tags: ["casual","action"] },
+  { file: "wheeliebike.html", title: "Wheelie Bike", tags: ["casual","driving"] },
+  { file: "wheely.html", title: "Wheely", tags: ["puzzle","casual"] },
+  { file: "wheely2.html", title: "Wheely 2", tags: ["puzzle","casual"] },
+  { file: "wheely3.html", title: "Wheely 3", tags: ["puzzle","casual"] },
+  { file: "wheely4.html", title: "Wheely 4", tags: ["puzzle","casual"] },
+  { file: "wheely5.html", title: "Wheely 5", tags: ["puzzle","casual"] },
+  { file: "wheely6.html", title: "Wheely 6", tags: ["puzzle","casual"] },
+  { file: "wheely7.html", title: "Wheely 7", tags: ["puzzle","casual"] },
+  { file: "wheely8.html", title: "Wheely 8", tags: ["puzzle","casual"] },
+  { file: "wordleunlimited.html", title: "Wordle Unlimited", tags: ["puzzle","casual"] },
+  { file: "worldshardestgame.html", title: "World's Hardest Game", tags: ["action","puzzle"] },
+  { file: "worldshardestgame2.html", title: "World's Hardest Game 2", tags: ["action","puzzle"] },
+  { file: "worldshardestgame3.html", title: "World's Hardest Game 3", tags: ["action","puzzle"] },
+  { file: "wrestlebros.html", title: "Wrestle Bros", tags: ["action","multiplayer"] },
+  { file: "zombierush.html", title: "Zombie Rush", tags: ["action","shooter"] },
+];
+
+// Thumbnail map — using Google's favicon service + game-specific images via CDN
+// We use a curated thumbnail from multiple free sources
+function getThumbnail(file) {
+  const name = file.replace(/\.html?$/, '').toLowerCase();
+  const thumbMap = {
+    '2048': 'https://play-lh.googleusercontent.com/in2AvPexR8KFX6sPx9QsA4hPeMPymT3mJRBhFBqQ0-Zq6fQ5MvtH2Pjfx8vKVCMrKK8=s256',
+    'slope': 'https://img.gamedistribution.com/fd5d1f7c6c704bb18c8e193339dbcf29-512x512.jpg',
+    'run3': 'https://img.gamedistribution.com/5c8cbdb8bc474dd38fc8da5ee85d3f9d-512x512.jpg',
+    'cookieclicker': 'https://img.gamedistribution.com/e51e4f5a15994bef97ee0a9c2d58ef6b-512x512.jpg',
+    'flappybird': 'https://img.gamedistribution.com/aedf4b6181a34da0be76c6f8dd3ef1de-512x512.jpg',
+    'geometrydash': 'https://img.gamedistribution.com/f6f0c4b24e914ae2a3aee89e95d79803-512x512.jpg',
+    'pacman': 'https://img.gamedistribution.com/5e0038f6c12f4a6db27f2fc4bac4b14b-512x512.jpg',
+    'retrobowl': 'https://img.gamedistribution.com/18bc7ac6773a4e2c84e05e80b3e0b6fc-512x512.jpg',
+    'chess': 'https://img.gamedistribution.com/7a82c22e3dad4a74b98a1c61be14f1e9-512x512.jpg',
+    'minesweeper': 'https://img.gamedistribution.com/f2e7e2a4a84947f4b0a9e98f8e4b5a4a-512x512.jpg',
+    'stickmanhook': 'https://img.gamedistribution.com/7dfe8f5a9c004c7f9e5c5caf8c8e5a5e-512x512.jpg',
+    'driftboss': 'https://img.gamedistribution.com/5e4c5c5c5c5c5c5c5c5c5c5c5c5c5c5c-512x512.jpg',
+    'ovo': 'https://img.gamedistribution.com/4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e-512x512.jpg',
+  };
+  return thumbMap[name] || null;
+}
+
+// Generate emoji icon based on tags
+function getEmoji(tags) {
+  const t = tags[0];
+  const map = {
+    'action': '⚔️', 'shooter': '🔫', 'puzzle': '🧩', 'platformer': '🏃',
+    'driving': '🏎️', 'sports': '⚽', 'strategy': '🧠', 'simulation': '🎮',
+    'io': '🌐', 'runner': '🏃', 'arcade': '👾', 'clicker': '🖱️',
+    'horror': '👻', 'multiplayer': '👥', 'tower-defense': '🗼',
+    'casual': '🎯', 'classic': '🕹️', 'rhythm': '🎵', 'music': '🎵',
+    'other': '❓'
+  };
+  return map[t] || '🎮';
+}
+
+// Get all unique tags
+const allTags = ['all', ...new Set(games.flatMap(g => g.tags))].sort((a,b) => {
+  if (a==='all') return -1; if (b==='all') return 1; return a.localeCompare(b);
+});
+
+let activeTag = 'all';
+let searchVal = '';
+
+// Build filters
+const filtersEl = document.getElementById('filters');
+allTags.forEach(tag => {
+  const btn = document.createElement('button');
+  btn.className = 'filter-btn' + (tag === 'all' ? ' active' : '');
+  btn.textContent = tag === 'all' ? 'ALL GAMES' : tag.toUpperCase().replace('-', ' ');
+  btn.dataset.tag = tag;
+  btn.addEventListener('click', () => {
+    activeTag = tag;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    render();
+  });
+  filtersEl.appendChild(btn);
+});
+
+// Search
+document.getElementById('search').addEventListener('input', e => {
+  searchVal = e.target.value.toLowerCase();
+  render();
+});
+
+// Render grid
+const grid = document.getElementById('grid');
+const countNum = document.getElementById('countNum');
+
+function render() {
+  const filtered = games.filter(g => {
+    const tagOk = activeTag === 'all' || g.tags.includes(activeTag);
+    const searchOk = !searchVal || g.title.toLowerCase().includes(searchVal);
+    return tagOk && searchOk;
+  });
+
+  countNum.textContent = filtered.length;
+
+  grid.innerHTML = '';
+
+  if (!filtered.length) {
+    grid.innerHTML = '<div class="no-results">// NO GAMES FOUND //</div>';
+    return;
+  }
+
+  filtered.forEach(g => {
+    const card = document.createElement('a');
+    card.className = 'card';
+    card.href = '#';
+    card.setAttribute('aria-label', g.title);
+
+    const thumb = getThumbnail(g.file);
+
+    let thumbHtml;
+    if (thumb) {
+      thumbHtml = `<img class="card-thumb" src="${thumb}" alt="${g.title}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div class="card-thumb-placeholder" style="display:none">${getEmoji(g.tags)}</div>`;
+    } else {
+      thumbHtml = `<div class="card-thumb-placeholder">${getEmoji(g.tags)}</div>`;
+    }
+
+    card.innerHTML = `
+      ${thumbHtml}
+      <div class="card-info">
+        <div class="card-title">${g.title}</div>
+        <div class="card-tag">${g.tags[0].replace('-',' ')}</div>
+      </div>
+    `;
+
+    card.addEventListener('click', e => {
+      e.preventDefault();
+      openModal(g);
+    });
+
+    grid.appendChild(card);
+  });
+}
+
+// Modal
+const overlay = document.getElementById('modalOverlay');
+const modalTitle = document.getElementById('modalTitle');
+const modalFrame = document.getElementById('modalFrame');
+const modalNewTab = document.getElementById('modalNewTab');
+const modalClose = document.getElementById('modalClose');
+
+function openModal(g) {
+  modalTitle.textContent = g.title.toUpperCase();
+  modalFrame.src = g.file;
+  modalNewTab.href = g.file;
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  overlay.classList.remove('open');
+  modalFrame.src = '';
+  document.body.style.overflow = '';
+}
+
+modalClose.addEventListener('click', closeModal);
+overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// Init
+countNum.textContent = games.length;
+render();
+</script>
+</body>
+</html>
