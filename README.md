@@ -4,4 +4,4 @@ Thanks to [CoolDude2349](https://github.com/CoolDude2349) for the [games](https:
 
 #Links
 ---
-[Vercel](unblock3dgam3s.vercel.app), [GitHub]
+[Vercel](unblock3dgam3s.vercel.app), [GitHub](https://cameroncodesstuff.github.io/unblock3dgam3s/)
